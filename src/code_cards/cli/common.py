@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 from code_cards import languages
 from code_cards.clock import to_iso
-from code_cards.errors import ConfirmationRequiredError
+from code_cards.errors import ConfirmationRequiredError, ValidationError
 from code_cards.models import Card, Deck
 from code_cards.services.container import Services, build_services
 from code_cards.services.study import StudyService
@@ -15,6 +16,20 @@ from code_cards.services.study import StudyService
 def services() -> Services:
     """Serviços sobre a pasta de dados atual (respeita ``CODE_CARDS_HOME``)."""
     return build_services()
+
+
+def read_text_file(path: str, option: str) -> str:
+    """Lê um arquivo UTF-8, transformando falhas em ``VALIDATION_ERROR``."""
+    try:
+        return Path(path).expanduser().read_text(encoding="utf-8")
+    except FileNotFoundError as exc:
+        raise ValidationError(
+            f"Arquivo não encontrado: {path}", {"option": option, "path": path}
+        ) from exc
+    except (OSError, UnicodeDecodeError) as exc:
+        raise ValidationError(
+            f"Não foi possível ler {path}: {exc}", {"option": option, "path": path}
+        ) from exc
 
 
 def require_yes(yes: bool, what: str) -> None:

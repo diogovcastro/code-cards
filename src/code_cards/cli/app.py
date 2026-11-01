@@ -7,6 +7,7 @@ from typing import Annotated
 import typer
 
 from code_cards import __version__, paths
+from code_cards.cli.batch import import_command, schema_command
 from code_cards.cli.cards import card_app
 from code_cards.cli.decks import deck_app
 from code_cards.cli.output import JsonTyperGroup, emit_ok
@@ -24,6 +25,8 @@ app = typer.Typer(
 )
 app.add_typer(deck_app, name="deck")
 app.add_typer(card_app, name="card")
+app.command("import")(import_command)
+app.command("schema")(schema_command)
 
 
 @app.callback(invoke_without_command=True)

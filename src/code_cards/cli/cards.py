@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 import sys
-from pathlib import Path
 from typing import Annotated
 
 import typer
 
 from code_cards import languages
-from code_cards.cli.common import card_view, deck_view, require_yes, services
+from code_cards.cli.common import card_view, deck_view, read_text_file, require_yes, services
 from code_cards.cli.output import emit_ok
 from code_cards.errors import ValidationError
 from code_cards.services.cards import CardDraft, slice_lines
@@ -59,19 +58,7 @@ class _Stdin:
 
 
 def _read_file(path: str, option: str, stdin: _Stdin) -> str:
-    if path == "-":
-        return stdin.read(option)
-    file = Path(path).expanduser()
-    try:
-        return file.read_text(encoding="utf-8")
-    except FileNotFoundError as exc:
-        raise ValidationError(
-            f"Arquivo não encontrado: {path}", {"option": option, "path": path}
-        ) from exc
-    except (OSError, UnicodeDecodeError) as exc:
-        raise ValidationError(
-            f"Não foi possível ler {path}: {exc}", {"option": option, "path": path}
-        ) from exc
+    return stdin.read(option) if path == "-" else read_text_file(path, option)
 
 
 def _resolve_code(
