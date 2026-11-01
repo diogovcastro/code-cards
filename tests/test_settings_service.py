@@ -80,4 +80,6 @@ def test_normaliza_e_exibe_teclas() -> None:
     assert normalize_key("Esc") == "escape"
     assert display_key("space") == "Espaço"
     assert display_key("a") == "A"
-    assert display_key("ctrl+k") == "Ctrl+k"
+    assert display_key("ctrl+s") == "Ctrl+S"
+    assert display_key("ctrl+down") == "Ctrl+↓"
+    assert display_key("question_mark") == "?"

@@ -34,7 +34,13 @@ KEY_DISPLAY: dict[str, str] = {
     "question_mark": "?",
     "delete": "Del",
     "backspace": "Backspace",
+    "up": "↑",
+    "down": "↓",
+    "left": "←",
+    "right": "→",
 }
+
+MODIFIER_DISPLAY: dict[str, str] = {"ctrl": "Ctrl", "shift": "Shift", "alt": "Alt"}
 
 
 def normalize_key(key: str) -> str:
@@ -45,11 +51,13 @@ def normalize_key(key: str) -> str:
 
 
 def display_key(key: str) -> str:
-    if key in KEY_DISPLAY:
-        return KEY_DISPLAY[key]
-    if len(key) == 1:
-        return key.upper()
-    return key.replace("ctrl+", "Ctrl+").replace("shift+", "Shift+").replace("alt+", "Alt+")
+    """Nome amigável de uma tecla do Textual: ``ctrl+s`` → ``Ctrl+S``."""
+    *modifiers, base = key.split("+") if key != "+" else ["+"]
+    if base in KEY_DISPLAY:
+        base = KEY_DISPLAY[base]
+    elif len(base) == 1:
+        base = base.upper()
+    return "+".join([*(MODIFIER_DISPLAY.get(m, m) for m in modifiers), base])
 
 
 def validate_keys(keys: dict[str, str]) -> None:

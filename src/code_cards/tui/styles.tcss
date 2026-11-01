@@ -67,3 +67,75 @@ Screen {
     height: auto;
     text-align: center;
 }
+
+/* Diálogos */
+
+ModalScreen {
+    align: center middle;
+    background: $background 60%;
+}
+
+.modal {
+    width: 64;
+    height: auto;
+    padding: 1 2;
+    border: thick $accent;
+    background: $surface;
+}
+
+.modal-message {
+    width: 100%;
+    margin-bottom: 1;
+}
+
+.modal-buttons {
+    height: auto;
+    margin-top: 1;
+    align-horizontal: right;
+}
+
+.modal-buttons Button {
+    margin-left: 1;
+}
+
+/* Editor de card */
+
+#editor-selects {
+    height: auto;
+    margin: 1 0 0 0;
+}
+
+#editor-selects > Vertical {
+    height: auto;
+    width: 1fr;
+    margin-right: 1;
+}
+
+#code-editor {
+    height: 2fr;
+    min-height: 6;
+    border: round $accent;
+    border-title-color: $text-muted;
+}
+
+#description-editor {
+    height: 1fr;
+    min-height: 4;
+    border: round $success;
+    border-title-color: $text-muted;
+}
+
+#tags-input {
+    margin-bottom: 1;
+}
+
+/* Gerenciar deck */
+
+#card-table {
+    height: 1fr;
+    margin-top: 1;
+}
+
+#empty-deck {
+    padding: 1 2;
+}

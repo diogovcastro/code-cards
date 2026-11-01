@@ -10,6 +10,9 @@ from textual.screen import Screen
 from textual.widgets import OptionList, Static
 
 from code_cards.errors import CodeCardsError
+from code_cards.tui.screens.card_editor import CardEditorScreen
+from code_cards.tui.screens.study import StudyScreen
+from code_cards.tui.widgets.confirm_modal import TextPromptModal
 from code_cards.tui.widgets.deck_table import DECK_PREFIX, DeckTable
 from code_cards.tui.widgets.help_bar import HelpBar
 
@@ -18,9 +21,12 @@ if TYPE_CHECKING:
 
 WELCOME = (
     "Bem-vindo ao code-cards!\n\n"
-    'Ainda não há decks. Crie um pela CLI com [b]code-cards deck create "Nome"[/b] '
-    "ou importe um lote com [b]code-cards import lote.json[/b]."
+    "Ainda não há decks. Aperte Enter em [b]Criar deck[/b] para começar, "
+    "ou importe um lote pela CLI com [b]code-cards import lote.json[/b]."
 )
+
+CREATE_DECK = "create-deck"
+ADD_CARD = "add-card"
 
 
 class MainScreen(Screen[None]):
@@ -47,7 +53,7 @@ class MainScreen(Screen[None]):
 
     def menu_actions(self) -> list[tuple[str, str]]:
         """Ações exibidas abaixo dos decks: ``(id, rótulo)``."""
-        return []
+        return [(CREATE_DECK, "+ Criar deck"), (ADD_CARD, "+ Adicionar card")]
 
     def help_items(self) -> list[tuple[str, str]]:
         return [("enter", "estudar"), ("q", "sair")]
@@ -61,7 +67,8 @@ class MainScreen(Screen[None]):
         table = self.query_one(DeckTable)
         table.set_content(summaries, self.menu_actions())
         self.query_one("#welcome").display = not summaries
-        self.query_one("#deck-list").display = table.option_count > 0
+        if not summaries:
+            table.highlight_id(CREATE_DECK)
         help_bar = self.query_one(HelpBar)
         help_bar.set_items(self.help_items())
         help_bar.set_enabled(self.cc_app.settings.show_help)
@@ -78,9 +85,37 @@ class MainScreen(Screen[None]):
             self.run_menu_action(option_id)
 
     def open_study(self, deck_id: str) -> None:
-        from code_cards.tui.screens.study import StudyScreen
-
         self.app.push_screen(StudyScreen(deck_id))
 
     def run_menu_action(self, action_id: str) -> None:
-        """Executa uma ação do menu (preenchida nas próximas telas)."""
+        if action_id == CREATE_DECK:
+            self.create_deck()
+        elif action_id == ADD_CARD:
+            self.add_card()
+
+    def create_deck(self) -> None:
+        def after(name: str | None) -> None:
+            if not name:
+                return
+            try:
+                deck = self.cc_app.services.decks.create(name)
+            except CodeCardsError as exc:
+                self.notify(exc.message, severity="error")
+                return
+            self.notify(f"Deck '{deck.name}' criado.")
+            self.refresh_decks()
+            self.query_one(DeckTable).highlight_id(f"{DECK_PREFIX}{deck.id}")
+
+        self.app.push_screen(
+            TextPromptModal(
+                "Nome do novo deck:", placeholder="Python async", confirm_label="Criar"
+            ),
+            after,
+        )
+
+    def add_card(self) -> None:
+        if not self.cc_app.services.store.deck_ids():
+            self.notify("Crie um deck antes de adicionar cards.", severity="warning")
+            return
+        deck_id = self.query_one(DeckTable).highlighted_deck_id
+        self.app.push_screen(CardEditorScreen(deck_id=deck_id))
