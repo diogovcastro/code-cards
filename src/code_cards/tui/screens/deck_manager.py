@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 from rich.text import Text
+from textual import events
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.screen import Screen
@@ -13,12 +14,13 @@ from textual.widgets import DataTable, Static
 from code_cards.errors import CodeCardsError, DeckNotFoundError
 from code_cards.models import MAX_CARDS_PER_DECK, Card, Deck
 from code_cards.scheduling import format_interval
+from code_cards.tui.screens.base import ConfigurableBackMixin
 from code_cards.tui.screens.card_editor import CardEditorScreen
 from code_cards.tui.widgets.confirm_modal import ConfirmModal, TextPromptModal
 from code_cards.tui.widgets.help_bar import HelpBar
 
 if TYPE_CHECKING:
-    from code_cards.tui.app import CodeCardsApp
+    pass
 
 CODE_WIDTH = 30
 DESCRIPTION_WIDTH = 30
@@ -29,7 +31,7 @@ def _clip(text: str, width: int) -> str:
     return text if len(text) <= width else text[: width - 1] + "…"
 
 
-class DeckManagerScreen(Screen[None]):
+class DeckManagerScreen(ConfigurableBackMixin, Screen[None]):
     BINDINGS = [
         Binding("escape", "back", "Voltar"),
         Binding("enter", "edit_card", "Editar", show=False, priority=True),
@@ -45,34 +47,35 @@ class DeckManagerScreen(Screen[None]):
         self.deck_id = deck_id
         self.deck: Deck | None = None
 
-    @property
-    def cc_app(self) -> CodeCardsApp:
-        return cast("CodeCardsApp", self.app)
-
     def compose(self) -> ComposeResult:
         yield Static(id="app-title")
         yield Static(id="empty-deck")
         table: DataTable[str | Text] = DataTable(id="card-table", cursor_type="row")
         yield table
-        yield HelpBar(
-            [
-                ("enter", "editar"),
-                ("delete", "apagar"),
-                ("n", "novo card"),
-                ("r", "renomear deck"),
-                ("x", "apagar deck"),
-                ("escape", "voltar"),
-            ],
-            id="help",
-        )
+        yield HelpBar(id="help")
 
     def on_mount(self) -> None:
         table = self.query_one(DataTable)
         table.add_column("Código", width=CODE_WIDTH, key="code")
         table.add_column("Descrição", width=DESCRIPTION_WIDTH, key="description")
         table.add_column("Próxima revisão", key="due")
-        self.query_one(HelpBar).set_enabled(self.cc_app.settings.show_help)
+        help_bar = self.query_one(HelpBar)
+        help_bar.set_items(self.help_items())
+        help_bar.set_enabled(self.cc_app.settings.show_help)
         self.reload()
+
+    def help_items(self) -> list[tuple[str, str]]:
+        return [
+            ("enter", "editar"),
+            ("delete", "apagar"),
+            ("n", "novo card"),
+            ("r", "renomear deck"),
+            ("x", "apagar deck"),
+            (self.back_key(), "voltar"),
+        ]
+
+    def on_key(self, event: events.Key) -> None:
+        self.handle_back_key(event)
 
     def on_screen_resume(self) -> None:
         self.reload()

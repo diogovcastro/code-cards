@@ -6,7 +6,7 @@ Cada alteração válida é gravada na hora.
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 from textual import events
 from textual.app import ComposeResult
@@ -24,11 +24,12 @@ from code_cards.services.settings import (
     MIN_RETENTION,
     display_key,
 )
+from code_cards.tui.screens.base import ConfigurableBackMixin
 from code_cards.tui.widgets.confirm_modal import ConfirmModal
 from code_cards.tui.widgets.help_bar import HelpBar
 
 if TYPE_CHECKING:
-    from code_cards.tui.app import CodeCardsApp
+    pass
 
 
 def parse_decimal(value: str) -> float:
@@ -81,7 +82,7 @@ NUMBER_FIELDS: dict[str, tuple[str, Validator, Callable[[str], Any], Callable[[A
 }
 
 
-class SettingsScreen(Screen[None]):
+class SettingsScreen(ConfigurableBackMixin, Screen[None]):
     BINDINGS = [
         Binding("escape", "back", "Voltar"),
     ]
@@ -90,10 +91,6 @@ class SettingsScreen(Screen[None]):
         super().__init__()
         self.capturing: str | None = None
         self._loading = False
-
-    @property
-    def cc_app(self) -> CodeCardsApp:
-        return cast("CodeCardsApp", self.app)
 
     @property
     def settings(self) -> Settings:
@@ -121,7 +118,7 @@ class SettingsScreen(Screen[None]):
             with Horizontal(classes="settings-row"):
                 yield Button("Restaurar padrões", id="reset", variant="warning")
         yield HelpBar(
-            [("enter", "trocar tecla"), ("tab", "próximo campo"), ("escape", "voltar")],
+            [("enter", "trocar tecla"), ("tab", "próximo campo")],
             id="help",
         )
 
@@ -138,7 +135,15 @@ class SettingsScreen(Screen[None]):
             self.query_one("#show-help", Switch).value = settings.show_help
             for field, (_, _, _, fmt) in NUMBER_FIELDS.items():
                 self.query_one(f"#input-{field}", Input).value = fmt(getattr(settings, field))
-            self.query_one(HelpBar).set_enabled(settings.show_help)
+            help_bar = self.query_one(HelpBar)
+            help_bar.set_items(
+                [
+                    ("enter", "trocar tecla"),
+                    ("tab", "próximo campo"),
+                    (settings.keys.get("back") or "escape", "voltar"),
+                ]
+            )
+            help_bar.set_enabled(settings.show_help)
         finally:
             self._loading = False
 
@@ -171,6 +176,7 @@ class SettingsScreen(Screen[None]):
 
     def on_key(self, event: events.Key) -> None:
         if self.capturing is None:
+            self.handle_back_key(event)
             return
         event.stop()
         event.prevent_default()

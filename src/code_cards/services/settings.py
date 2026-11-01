@@ -13,8 +13,11 @@ from code_cards.storage import JsonStore
 #: Teclas que nunca podem ser usadas pelas ações. O Esc sempre volta (e pode
 #: ser a tecla da ação voltar); as setas ↑/↓ sempre rolam no estudo.
 RESERVED_KEYS: frozenset[str] = frozenset({"escape", "q", "Q", "question_mark", "up", "down"})
-#: Teclas proibidas só para a ação voltar (abrem itens nas listas).
-BACK_FORBIDDEN_KEYS: frozenset[str] = frozenset({"enter", "tab", "shift+tab"})
+#: Teclas proibidas só para a ação voltar: já são atalhos fixos das telas
+#: (abrir itens, trocar campo, gerenciar/criar/renomear/apagar).
+BACK_FORBIDDEN_KEYS: frozenset[str] = frozenset(
+    {"enter", "tab", "shift+tab", "g", "n", "r", "x", "delete"}
+)
 
 MIN_RETENTION = 0.80
 MAX_RETENTION = 0.97
@@ -84,7 +87,10 @@ def validate_keys(keys: dict[str, str | None]) -> None:
             raise _key_error(f"A tecla '{display_key(key)}' é reservada.", action, key)
         if action == "back" and key in BACK_FORBIDDEN_KEYS:
             raise _key_error(
-                f"A tecla '{display_key(key)}' não pode ser usada para voltar.", action, key
+                f"A tecla '{display_key(key)}' já é um atalho do app; "
+                "não pode ser usada para voltar.",
+                action,
+                key,
             )
         if key in seen:
             raise _key_error(

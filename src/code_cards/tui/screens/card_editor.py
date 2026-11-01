@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 from textual.app import ComposeResult
 from textual.binding import Binding
@@ -15,12 +15,13 @@ from code_cards import languages
 from code_cards.errors import CodeCardsError
 from code_cards.models import Card
 from code_cards.services.cards import CardDraft
+from code_cards.tui.screens.base import ConfigurableBackMixin
 from code_cards.tui.widgets.code_view import code_area
 from code_cards.tui.widgets.confirm_modal import ConfirmModal
 from code_cards.tui.widgets.help_bar import HelpBar
 
 if TYPE_CHECKING:
-    from code_cards.tui.app import CodeCardsApp
+    pass
 
 
 @dataclass(frozen=True)
@@ -36,8 +37,11 @@ def parse_tags(text: str) -> list[str]:
     return [t.strip() for t in text.split(",") if t.strip()]
 
 
-class CardEditorScreen(Screen[bool]):
+class CardEditorScreen(ConfigurableBackMixin, Screen[bool]):
     """Devolve ``True`` se o card foi salvo."""
+
+    # A tecla de voltar seria digitada nos campos; aqui valem o Esc e o mouse.
+    BACK_KEY_ENABLED = False
 
     BINDINGS = [
         Binding("ctrl+s", "save", "Salvar", priority=True),
@@ -52,10 +56,6 @@ class CardEditorScreen(Screen[bool]):
         self.card_id = card_id
         self.card: Card | None = None
         self._initial: _Snapshot | None = None
-
-    @property
-    def cc_app(self) -> CodeCardsApp:
-        return cast("CodeCardsApp", self.app)
 
     @property
     def is_new(self) -> bool:
@@ -179,6 +179,9 @@ class CardEditorScreen(Screen[bool]):
         for warning in warnings:
             self.notify(warning["message"], severity="warning")
         self.dismiss(True)
+
+    def go_back(self) -> None:
+        self.action_cancel()
 
     def action_cancel(self) -> None:
         if not self.is_dirty:

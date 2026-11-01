@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
+from textual import events
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
 from textual.widgets import Button, Input, Label
 
+from code_cards.tui.screens.base import ConfigurableBackMixin
 
-class ConfirmModal(ModalScreen[bool]):
+
+class ConfirmModal(ConfigurableBackMixin, ModalScreen[bool]):
     """Pergunta sim/não. Devolve ``True`` se confirmado."""
 
     BINDINGS = [
@@ -44,11 +47,19 @@ class ConfirmModal(ModalScreen[bool]):
     def action_answer(self, value: bool) -> None:
         self.dismiss(value)
 
+    def on_key(self, event: events.Key) -> None:
+        self.handle_back_key(event)
 
-class TextPromptModal(ModalScreen[str | None]):
+    def go_back(self) -> None:
+        self.dismiss(False)
+
+
+class TextPromptModal(ConfigurableBackMixin, ModalScreen[str | None]):
     """Pede um texto. Devolve o texto (sem espaços nas pontas) ou ``None`` se cancelado."""
 
     BINDINGS = [Binding("escape", "cancel", "Cancelar", priority=True)]
+    # A tecla de voltar seria digitada no campo; aqui valem o Esc e o mouse.
+    BACK_KEY_ENABLED = False
 
     def __init__(
         self,
@@ -92,4 +103,7 @@ class TextPromptModal(ModalScreen[str | None]):
             self.dismiss(None)
 
     def action_cancel(self) -> None:
+        self.dismiss(None)
+
+    def go_back(self) -> None:
         self.dismiss(None)

@@ -108,7 +108,7 @@ def test_trocar_tecla_de_voltar(service: SettingsService) -> None:
 
 @pytest.mark.parametrize("key", ["enter", "tab"])
 def test_voltar_nao_aceita_enter_nem_tab(service: SettingsService, key: str) -> None:
-    with pytest.raises(ValidationError, match="voltar"):
+    with pytest.raises(ValidationError, match="atalho"):
         service.set_key("back", key)
 
 

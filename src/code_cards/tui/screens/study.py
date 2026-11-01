@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 from rich.text import Text
 from textual import events
@@ -18,6 +18,7 @@ from code_cards.errors import CardNotFoundError, CodeCardsError, DeckNotFoundErr
 from code_cards.models import Grade, Settings
 from code_cards.scheduling import format_interval
 from code_cards.services.study import StudyItem, StudyService
+from code_cards.tui.screens.base import ConfigurableBackMixin
 from code_cards.tui.widgets.code_view import (
     DescriptionView,
     StudyCodeView,
@@ -27,15 +28,15 @@ from code_cards.tui.widgets.code_view import (
 from code_cards.tui.widgets.help_bar import HelpBar
 
 if TYPE_CHECKING:
-    from code_cards.tui.app import CodeCardsApp
+    pass
 
 GRADE_ORDER = (Grade.GREAT, Grade.PARTIAL, Grade.FORGOT)
 STUDY_ACTIONS = frozenset(
-    {"great", "partial", "forgot", "reveal", "undo", "scroll_up", "scroll_down"}
+    {"great", "partial", "forgot", "reveal", "undo", "back", "scroll_up", "scroll_down"}
 )
 
 
-class StudyScreen(Screen[None]):
+class StudyScreen(ConfigurableBackMixin, Screen[None]):
     BINDINGS = [
         Binding("escape", "back", "Voltar"),
         Binding("question_mark", "toggle_help", "Ajuda", show=False),
@@ -51,10 +52,6 @@ class StudyScreen(Screen[None]):
         self.revealed = False
         self.settings: Settings = Settings()
         self.study: StudyService | None = None
-
-    @property
-    def cc_app(self) -> CodeCardsApp:
-        return cast("CodeCardsApp", self.app)
 
     def compose(self) -> ComposeResult:
         with Horizontal(id="study-header"):
@@ -125,7 +122,7 @@ class StudyScreen(Screen[None]):
             desc_box.display = False
             done.display = True
             done.update(self._done_text())
-            self._set_help([("escape", "voltar")])
+            self._set_help([(self.back_key(), "voltar")])
             return
         done.display = False
         code.display = True
@@ -139,7 +136,7 @@ class StudyScreen(Screen[None]):
             [
                 (self.settings.keys["reveal"] or "space", "mostrar descrição"),
                 ("↑↓", "rolar"),
-                ("escape", "voltar"),
+                (self.back_key(), "voltar"),
             ]
         )
 
@@ -217,7 +214,16 @@ class StudyScreen(Screen[None]):
             return
         event.stop()
         event.prevent_default()
-        if action == "reveal":
+        self.perform_action(action)
+
+    def run_mouse_action(self, action: str) -> None:
+        if action in STUDY_ACTIONS:
+            self.perform_action(action)
+
+    def perform_action(self, action: str) -> None:
+        if action == "back":
+            self.go_back()
+        elif action == "reveal":
             self.reveal()
         elif action == "undo":
             self.undo()
