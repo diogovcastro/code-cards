@@ -44,3 +44,9 @@ class StorageError(CodeCardsError):
     """Arquivo corrompido, de versão mais nova ou ilegível."""
 
     code = "STORAGE_ERROR"
+
+
+class ConfirmationRequiredError(CodeCardsError):
+    """Operação destrutiva sem ``--yes``: falha em vez de perguntar."""
+
+    code = "CONFIRMATION_REQUIRED"
