@@ -142,7 +142,7 @@ class SettingsScreen(Screen[None]):
         finally:
             self._loading = False
 
-    def _update_key_button(self, action: str, key: str) -> None:
+    def _update_key_button(self, action: str, key: str | None) -> None:
         self.query_one(f"#key-{action}", Button).label = display_key(key)
 
     # -- teclas ---------------------------------------------------------------

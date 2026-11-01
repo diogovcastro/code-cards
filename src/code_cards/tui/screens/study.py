@@ -14,7 +14,7 @@ from textual.screen import Screen
 from textual.widgets import Static, TextArea
 
 from code_cards.errors import CardNotFoundError, CodeCardsError, DeckNotFoundError
-from code_cards.models import ACTIONS, Grade, Settings
+from code_cards.models import Grade, Settings
 from code_cards.scheduling import format_interval
 from code_cards.services.study import StudyItem, StudyService
 from code_cards.tui.widgets.code_view import code_area, show_code
@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     from code_cards.tui.app import CodeCardsApp
 
 GRADE_ORDER = (Grade.GREAT, Grade.PARTIAL, Grade.FORGOT)
+STUDY_ACTIONS = frozenset({"great", "partial", "forgot", "reveal", "undo"})
 
 
 class StudyScreen(Screen[None]):
@@ -71,7 +72,7 @@ class StudyScreen(Screen[None]):
         return self.study
 
     def _key_to_action(self) -> dict[str, str]:
-        return {key: action for action, key in self.settings.keys.items()}
+        return {key: action for action, key in self.settings.keys.items() if key}
 
     def update_header(self) -> None:
         try:
@@ -116,7 +117,9 @@ class StudyScreen(Screen[None]):
         show_code(code, item.card.code, item.card.language)
         code.focus()
         self.query_one("#description", Static).update(Text(item.card.description))
-        self._set_help([(self.settings.keys["reveal"], "mostrar descrição"), ("escape", "voltar")])
+        self._set_help(
+            [(self.settings.keys["reveal"] or "space", "mostrar descrição"), ("escape", "voltar")]
+        )
 
     def _done_text(self) -> Text:
         text = Text("Deck concluído por hoje!\n\n", style="bold green")
@@ -148,10 +151,13 @@ class StudyScreen(Screen[None]):
         self.query_one("#description-box").display = True
         keys = self.settings.keys
         items = [
-            (keys[grade.value], f"{grade.label} · {format_interval(self.item.previews[grade])}")
+            (
+                keys[grade.value] or "",
+                f"{grade.label} · {format_interval(self.item.previews[grade])}",
+            )
             for grade in GRADE_ORDER
         ]
-        items.append((keys["undo"], "desfazer"))
+        items.append((keys["undo"] or "", "desfazer"))
         self._set_help(items, separator="    ")
 
     def answer(self, grade: Grade) -> None:
@@ -182,7 +188,7 @@ class StudyScreen(Screen[None]):
 
     def on_key(self, event: events.Key) -> None:
         action = self._key_to_action().get(event.key)
-        if action is None or action not in ACTIONS:
+        if action not in STUDY_ACTIONS:
             return
         event.stop()
         event.prevent_default()

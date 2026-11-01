@@ -16,7 +16,7 @@ from typing import Any
 from code_cards.clock import from_iso, to_iso
 
 DECK_SCHEMA_VERSION = 1
-SETTINGS_SCHEMA_VERSION = 1
+SETTINGS_SCHEMA_VERSION = 2
 MAX_CARDS_PER_DECK = 100
 
 _ID_ALPHABET = string.ascii_lowercase + string.digits
@@ -187,26 +187,44 @@ def undo_event(review_id: str, at: datetime) -> dict[str, Any]:
     return {"type": "undo", "review_id": review_id, "at": to_iso(at)}
 
 
-ACTIONS: tuple[str, ...] = ("great", "partial", "forgot", "reveal", "undo")
+#: Ações configuráveis (teclas e, depois, botões do mouse).
+ACTIONS: tuple[str, ...] = (
+    "great",
+    "partial",
+    "forgot",
+    "reveal",
+    "undo",
+    "back",
+    "scroll_up",
+    "scroll_down",
+)
 ACTION_LABELS: dict[str, str] = {
     "great": "Ótimo",
     "partial": "Parcial",
     "forgot": "Não lembro",
     "reveal": "Mostrar descrição",
     "undo": "Desfazer",
+    "back": "Voltar",
+    "scroll_up": "Rolar para cima",
+    "scroll_down": "Rolar para baixo",
 }
-DEFAULT_KEYS: dict[str, str] = {
+#: Ações que podem ficar sem tecla (as setas ↑/↓ sempre rolam).
+OPTIONAL_KEY_ACTIONS: frozenset[str] = frozenset({"scroll_up", "scroll_down"})
+DEFAULT_KEYS: dict[str, str | None] = {
     "great": "a",
     "partial": "s",
     "forgot": "d",
     "reveal": "space",
     "undo": "u",
+    "back": "escape",
+    "scroll_up": "w",
+    "scroll_down": None,  # "s" é Parcial
 }
 
 
 @dataclass
 class Settings:
-    keys: dict[str, str] = field(default_factory=lambda: dict(DEFAULT_KEYS))
+    keys: dict[str, str | None] = field(default_factory=lambda: dict(DEFAULT_KEYS))
     show_help: bool = True
     new_cards_per_day: int = 50
     reviews_per_day: int = 200
@@ -217,7 +235,7 @@ class Settings:
     def to_dict(self) -> dict[str, Any]:
         return {
             "schema_version": SETTINGS_SCHEMA_VERSION,
-            "keys": {action: self.keys[action] for action in ACTIONS},
+            "keys": {action: self.keys.get(action) for action in ACTIONS},
             "show_help": self.show_help,
             "new_cards_per_day": self.new_cards_per_day,
             "reviews_per_day": self.reviews_per_day,

@@ -7,11 +7,14 @@ from dataclasses import fields, replace
 from typing import Any
 
 from code_cards.errors import ValidationError
-from code_cards.models import ACTIONS, Settings
+from code_cards.models import ACTIONS, OPTIONAL_KEY_ACTIONS, Settings
 from code_cards.storage import JsonStore
 
-#: Teclas que nunca podem ser usadas por uma ação de estudo.
-RESERVED_KEYS: frozenset[str] = frozenset({"escape", "q", "Q", "question_mark"})
+#: Teclas que nunca podem ser usadas pelas ações. O Esc sempre volta (e pode
+#: ser a tecla da ação voltar); as setas ↑/↓ sempre rolam no estudo.
+RESERVED_KEYS: frozenset[str] = frozenset({"escape", "q", "Q", "question_mark", "up", "down"})
+#: Teclas proibidas só para a ação voltar (abrem itens nas listas).
+BACK_FORBIDDEN_KEYS: frozenset[str] = frozenset({"enter", "tab", "shift+tab"})
 
 MIN_RETENTION = 0.80
 MAX_RETENTION = 0.97
@@ -50,8 +53,10 @@ def normalize_key(key: str) -> str:
     return KEY_ALIASES.get(key.lower(), key)
 
 
-def display_key(key: str) -> str:
+def display_key(key: str | None) -> str:
     """Nome amigável de uma tecla do Textual: ``ctrl+s`` → ``Ctrl+S``."""
+    if key is None:
+        return "—"
     *modifiers, base = key.split("+") if key != "+" else ["+"]
     if base in KEY_DISPLAY:
         base = KEY_DISPLAY[base]
@@ -60,22 +65,33 @@ def display_key(key: str) -> str:
     return "+".join([*(MODIFIER_DISPLAY.get(m, m) for m in modifiers), base])
 
 
-def validate_keys(keys: dict[str, str]) -> None:
-    missing = [action for action in ACTIONS if action not in keys]
+def _key_error(message: str, action: str, key: str, **extra: Any) -> ValidationError:
+    return ValidationError(message, {"field": "keys", "action": action, "key": key, **extra})
+
+
+def validate_keys(keys: dict[str, str | None]) -> None:
+    missing = [
+        action for action in ACTIONS if action not in OPTIONAL_KEY_ACTIONS and not keys.get(action)
+    ]
     if missing:
         raise ValidationError(f"Faltam teclas para: {', '.join(missing)}.", {"missing": missing})
     seen: dict[str, str] = {}
     for action in ACTIONS:
-        key = keys[action]
-        if key in RESERVED_KEYS:
-            raise ValidationError(
-                f"A tecla '{display_key(key)}' é reservada.",
-                {"field": "keys", "action": action, "key": key},
+        key = keys.get(action)
+        if key is None:
+            continue
+        if key in RESERVED_KEYS and not (action == "back" and key == "escape"):
+            raise _key_error(f"A tecla '{display_key(key)}' é reservada.", action, key)
+        if action == "back" and key in BACK_FORBIDDEN_KEYS:
+            raise _key_error(
+                f"A tecla '{display_key(key)}' não pode ser usada para voltar.", action, key
             )
         if key in seen:
-            raise ValidationError(
+            raise _key_error(
                 f"A tecla '{display_key(key)}' já está em uso por '{seen[key]}'.",
-                {"field": "keys", "action": action, "key": key, "conflict": seen[key]},
+                action,
+                key,
+                conflict=seen[key],
             )
         seen[key] = action
 
@@ -134,10 +150,23 @@ class SettingsService:
             changes["keys"] = {**current.keys, **changes["keys"]}
         return self.save(replace(current, **changes))
 
-    def set_key(self, action: str, key: str) -> Settings:
+    @staticmethod
+    def _check_action(action: str) -> None:
         if action not in ACTIONS:
             raise ValidationError(f"Ação desconhecida: '{action}'.", {"action": action})
+
+    def set_key(self, action: str, key: str) -> Settings:
+        self._check_action(action)
         return self.update(keys={action: normalize_key(key)})
+
+    def clear_key(self, action: str) -> Settings:
+        """Remove a tecla de uma ação opcional (rolagem)."""
+        self._check_action(action)
+        if action not in OPTIONAL_KEY_ACTIONS:
+            raise ValidationError(
+                "Essa ação precisa de uma tecla.", {"field": "keys", "action": action}
+            )
+        return self.update(keys={action: None})
 
     def reset(self) -> Settings:
         return self.save(Settings())

@@ -134,3 +134,33 @@ def test_trava_entre_processos(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) 
     with JsonStore(DataPaths(root)).deck_lock("abc123"):
         pass
     assert os.path.isdir(root / ".locks")
+
+
+def test_migra_settings_v1_para_v2_preservando_teclas(store: JsonStore) -> None:
+    path = store.paths.settings_file
+    path.parent.mkdir(parents=True, exist_ok=True)
+    v1 = {
+        "schema_version": 1,
+        "keys": {"great": "j", "partial": "k", "forgot": "l", "reveal": "space", "undo": "w"},
+        "show_help": False,
+        "new_cards_per_day": 10,
+    }
+    path.write_text(json.dumps(v1), encoding="utf-8")
+    settings = store.load_settings()
+    assert settings.keys["great"] == "j"
+    assert settings.keys["undo"] == "w"
+    assert settings.keys["back"] == "escape"
+    # "w" já era Desfazer, então rolar para cima fica sem tecla.
+    assert settings.keys["scroll_up"] is None
+    assert settings.keys["scroll_down"] is None
+    assert settings.show_help is False
+    assert settings.new_cards_per_day == 10
+    saved = json.loads(path.read_text(encoding="utf-8"))
+    assert saved["schema_version"] == 2
+
+
+def test_migra_settings_v1_com_padroes(store: JsonStore) -> None:
+    path = store.paths.settings_file
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"schema_version": 1}), encoding="utf-8")
+    assert store.load_settings() == Settings()

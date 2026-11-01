@@ -83,3 +83,43 @@ def test_normaliza_e_exibe_teclas() -> None:
     assert display_key("ctrl+s") == "Ctrl+S"
     assert display_key("ctrl+down") == "Ctrl+↓"
     assert display_key("question_mark") == "?"
+
+
+def test_padroes_de_voltar_e_rolagem(service: SettingsService) -> None:
+    keys = service.get().keys
+    assert keys["back"] == "escape"
+    assert keys["scroll_up"] == "w"
+    assert keys["scroll_down"] is None
+
+
+def test_trocar_tecla_de_voltar(service: SettingsService) -> None:
+    assert service.set_key("back", "b").keys["back"] == "b"
+    # Esc continua reservado para as outras ações.
+    with pytest.raises(ValidationError, match="reservada"):
+        service.set_key("great", "escape")
+    # E pode voltar a ser a tecla de voltar.
+    assert service.set_key("back", "escape").keys["back"] == "escape"
+
+
+@pytest.mark.parametrize("key", ["enter", "tab"])
+def test_voltar_nao_aceita_enter_nem_tab(service: SettingsService, key: str) -> None:
+    with pytest.raises(ValidationError, match="voltar"):
+        service.set_key("back", key)
+
+
+@pytest.mark.parametrize("key", ["up", "down"])
+def test_setas_sao_reservadas(service: SettingsService, key: str) -> None:
+    with pytest.raises(ValidationError, match="reservada"):
+        service.set_key("scroll_down", key)
+
+
+def test_rolagem_pode_ficar_sem_tecla(service: SettingsService) -> None:
+    assert service.set_key("scroll_down", "x").keys["scroll_down"] == "x"
+    assert service.clear_key("scroll_down").keys["scroll_down"] is None
+    with pytest.raises(ValidationError, match="precisa de uma tecla"):
+        service.clear_key("great")
+
+
+def test_rolagem_nao_pode_repetir_tecla_de_nota(service: SettingsService) -> None:
+    with pytest.raises(ValidationError, match="já está em uso"):
+        service.set_key("scroll_down", "s")
