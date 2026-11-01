@@ -87,8 +87,15 @@ Uma linha por evento. O arquivo só recebe linhas novas, nunca é reescrito:
 
 ```json
 {
-  "schema_version": 1,
-  "keys": { "great": "a", "partial": "s", "forgot": "d", "reveal": "space", "undo": "u" },
+  "schema_version": 2,
+  "keys": {
+    "great": "a", "partial": "s", "forgot": "d", "reveal": "space", "undo": "u",
+    "back": "escape", "scroll_up": "w", "scroll_down": null
+  },
+  "mouse": {
+    "great": null, "partial": null, "forgot": null, "reveal": null, "undo": null,
+    "back": null, "scroll_up": null, "scroll_down": null
+  },
   "show_help": true,
   "new_cards_per_day": 50,
   "reviews_per_day": 200,
@@ -100,7 +107,8 @@ Uma linha por evento. O arquivo só recebe linhas novas, nunca é reescrito:
 
 | Campo | Significado |
 |---|---|
-| `keys` | Teclas do estudo, com os nomes do Textual (`a`, `space`, `j`, `f1`...). `Esc`, `Q` e `?` são reservadas. |
+| `keys` | Tecla de cada ação, com os nomes do Textual (`a`, `space`, `j`, `f1`...). `Esc`, `Q`, `?`, `↑` e `↓` são reservadas: o `Esc` sempre volta e as setas sempre rolam. `back` aceita `escape` (padrão) ou outra tecla, exceto atalhos fixos das telas (`Enter`, `Tab`, `G`, `N`, `R`, `X`, `Del`). `scroll_up` e `scroll_down` podem ser `null`. |
+| `mouse` | Botão do mouse de cada ação, ou `null` (padrão). Valores: `middle`, `right`, `button8` (lateral voltar), `button9` (lateral avançar), `button10`, `button11`. O botão esquerdo e a roda são reservados. |
 | `show_help` | Mostra a barra de ajuda. As teclas funcionam mesmo com ela desligada (`?` mostra a barra temporariamente). |
 | `new_cards_per_day` | Cards novos por dia, por deck. |
 | `reviews_per_day` | Revisões por dia, por deck. |
@@ -108,7 +116,7 @@ Uma linha por evento. O arquivo só recebe linhas novas, nunca é reescrito:
 | `day_starts_at_hour` | Hora local em que o dia de estudo vira (como no Anki). Quem estuda à 1h ainda está no dia anterior. |
 | `editor_theme` | Tema de cores do código: `monokai`, `dracula`, `github_light`, `vscode_dark` ou `css`. |
 
-Se o arquivo não existir, valem os padrões acima.
+Se o arquivo não existir, valem os padrões acima. Um `settings.json` da versão 1 é migrado automaticamente para a versão 2: as teclas já escolhidas são mantidas, `back` vira `escape`, `scroll_up` vira `w` (ou `null`, se o `w` já estiver em uso) e o bloco `mouse` começa vazio.
 
 ## Segurança dos arquivos
 

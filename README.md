@@ -54,7 +54,10 @@ code-cards                   # abre a TUI
 | Estudo | `Espaço` | mostrar a descrição |
 | | `A` / `S` / `D` | Ótimo / Parcial / Não lembro |
 | | `U` | desfazer a última resposta |
+| | `↑` / `↓` (e `W`) | rolar a seção em foco |
+| | clique esquerdo | passar o foco para o código ou para a descrição |
 | | `Esc` | voltar |
+| Gerenciar deck e configurações | `Esc` | voltar |
 | Gerenciar deck | `Enter` | editar o card |
 | | `Del` | apagar o card |
 | | `N` | novo card |
@@ -65,7 +68,11 @@ code-cards                   # abre a TUI
 | | `Ctrl+↓` / `Ctrl+↑` | próximo campo / campo anterior |
 | Painel, estudo e gerenciar | `?` | mostrar/esconder a barra de ajuda |
 
-As teclas do estudo podem ser trocadas em **⚙ Configurações**, junto com a barra de ajuda, os limites diários (50 cards novos e 200 revisões por deck), a retenção desejada e a hora em que o dia de estudo vira (4h, como no Anki).
+Ao abrir um card, só o código aparece e a rolagem age nele. Ao revelar, o foco passa para a descrição. Com as duas seções na tela, um clique esquerdo escolhe qual delas rola, sem mudar nada na aparência.
+
+Em **⚙ Configurações** dá para trocar a tecla de cada ação (notas, revelar, desfazer, voltar e rolar) e associar a ela um **botão do mouse**: meio, direito ou os botões laterais. Por padrão nenhum botão vem ligado. O `Esc` sempre volta, mesmo se a tecla de voltar for trocada. Na mesma tela ficam a barra de ajuda, os limites diários (50 cards novos e 200 revisões por deck), a retenção desejada e a hora em que o dia de estudo vira (4h, como no Anki).
+
+Os botões laterais do mouse dependem do terminal: xterm, kitty, WezTerm, foot e Konsole os repassam; alguns terminais não. Se a tela de configurações não receber o clique em 10 segundos, ela avisa.
 
 ## CLI
 
