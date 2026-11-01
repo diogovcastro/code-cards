@@ -51,3 +51,8 @@ python_version = "3.11"
 packages = ["code_cards"]
 mypy_path = "src"
 ignore_missing_imports = true
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
+extraPaths = ["src"]
