@@ -139,3 +139,49 @@ ModalScreen {
 #empty-deck {
     padding: 1 2;
 }
+
+/* Configurações */
+
+#settings-body {
+    height: 1fr;
+}
+
+.settings-section {
+    text-style: bold;
+    color: $accent;
+    margin: 1 0 0 0;
+}
+
+.settings-row {
+    height: auto;
+    margin: 0 0 0 2;
+}
+
+.settings-label {
+    width: 38;
+}
+
+.key-button {
+    min-width: 24;
+    margin-bottom: 1;
+}
+
+Switch {
+    border: none;
+    padding: 0;
+    height: 1;
+}
+
+.key-button.capturing {
+    background: $warning;
+    color: $text;
+}
+
+Input.number {
+    width: 16;
+    margin-bottom: 1;
+}
+
+#reset {
+    margin-top: 1;
+}

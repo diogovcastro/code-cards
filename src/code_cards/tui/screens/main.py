@@ -12,6 +12,7 @@ from textual.widgets import OptionList, Static
 from code_cards.errors import CodeCardsError
 from code_cards.tui.screens.card_editor import CardEditorScreen
 from code_cards.tui.screens.deck_manager import DeckManagerScreen
+from code_cards.tui.screens.settings import SettingsScreen
 from code_cards.tui.screens.study import StudyScreen
 from code_cards.tui.widgets.confirm_modal import TextPromptModal
 from code_cards.tui.widgets.deck_table import DECK_PREFIX, DeckTable
@@ -28,6 +29,7 @@ WELCOME = (
 
 CREATE_DECK = "create-deck"
 ADD_CARD = "add-card"
+OPEN_SETTINGS = "settings"
 
 
 class MainScreen(Screen[None]):
@@ -55,7 +57,11 @@ class MainScreen(Screen[None]):
 
     def menu_actions(self) -> list[tuple[str, str]]:
         """Ações exibidas abaixo dos decks: ``(id, rótulo)``."""
-        return [(CREATE_DECK, "+ Criar deck"), (ADD_CARD, "+ Adicionar card")]
+        return [
+            (CREATE_DECK, "+ Criar deck"),
+            (ADD_CARD, "+ Adicionar card"),
+            (OPEN_SETTINGS, "⚙ Configurações"),
+        ]
 
     def help_items(self) -> list[tuple[str, str]]:
         return [("enter", "estudar"), ("g", "gerenciar deck"), ("q", "sair")]
@@ -94,6 +100,8 @@ class MainScreen(Screen[None]):
             self.create_deck()
         elif action_id == ADD_CARD:
             self.add_card()
+        elif action_id == OPEN_SETTINGS:
+            self.app.push_screen(SettingsScreen())
 
     def action_manage(self) -> None:
         deck_id = self.query_one(DeckTable).highlighted_deck_id
