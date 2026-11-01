@@ -13,6 +13,7 @@ from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, VerticalScroll
 from textual.screen import Screen
+from textual.timer import Timer
 from textual.validation import ValidationResult, Validator
 from textual.widgets import Button, Input, Label, Static, Switch
 
@@ -23,7 +24,9 @@ from code_cards.services.settings import (
     MAX_RETENTION,
     MIN_RETENTION,
     display_key,
+    display_mouse,
 )
+from code_cards.tui.mouse import button_name
 from code_cards.tui.screens.base import ConfigurableBackMixin
 from code_cards.tui.widgets.confirm_modal import ConfirmModal
 from code_cards.tui.widgets.help_bar import HelpBar
@@ -82,6 +85,9 @@ NUMBER_FIELDS: dict[str, tuple[str, Validator, Callable[[str], Any], Callable[[A
 }
 
 
+MOUSE_CAPTURE_TIMEOUT = 10.0
+
+
 class SettingsScreen(ConfigurableBackMixin, Screen[None]):
     BINDINGS = [
         Binding("escape", "back", "Voltar"),
@@ -89,7 +95,9 @@ class SettingsScreen(ConfigurableBackMixin, Screen[None]):
 
     def __init__(self) -> None:
         super().__init__()
-        self.capturing: str | None = None
+        #: ``(tipo, ação)`` em captura: tipo ``"key"`` ou ``"mouse"``.
+        self.capturing: tuple[str, str] | None = None
+        self._capture_timer: Timer | None = None
         self._loading = False
 
     @property
@@ -99,11 +107,15 @@ class SettingsScreen(ConfigurableBackMixin, Screen[None]):
     def compose(self) -> ComposeResult:
         yield Static("Configurações", id="app-title")
         with VerticalScroll(id="settings-body"):
-            yield Static("Teclas do estudo", classes="settings-section")
+            with Horizontal(classes="settings-row settings-header"):
+                yield Static("Atalhos", classes="settings-label settings-section")
+                yield Static("Tecla", classes="column-title")
+                yield Static("Mouse", classes="column-title")
             for action in ACTIONS:
                 with Horizontal(classes="settings-row"):
                     yield Label(ACTION_LABELS[action], classes="settings-label")
                     yield Button("", id=f"key-{action}", classes="key-button", compact=True)
+                    yield Button("", id=f"mouse-{action}", classes="key-button", compact=True)
             yield Static("Exibição", classes="settings-section")
             with Horizontal(classes="settings-row"):
                 yield Label("Barra de ajuda", classes="settings-label")
@@ -117,10 +129,7 @@ class SettingsScreen(ConfigurableBackMixin, Screen[None]):
                     )
             with Horizontal(classes="settings-row"):
                 yield Button("Restaurar padrões", id="reset", variant="warning")
-        yield HelpBar(
-            [("enter", "trocar tecla"), ("tab", "próximo campo")],
-            id="help",
-        )
+        yield HelpBar(id="help")
 
     def on_mount(self) -> None:
         self.load_values()
@@ -131,14 +140,15 @@ class SettingsScreen(ConfigurableBackMixin, Screen[None]):
         self._loading = True
         try:
             for action in ACTIONS:
-                self._update_key_button(action, settings.keys[action])
+                self._refresh_binding_buttons(action, settings)
             self.query_one("#show-help", Switch).value = settings.show_help
             for field, (_, _, _, fmt) in NUMBER_FIELDS.items():
                 self.query_one(f"#input-{field}", Input).value = fmt(getattr(settings, field))
             help_bar = self.query_one(HelpBar)
             help_bar.set_items(
                 [
-                    ("enter", "trocar tecla"),
+                    ("enter", "trocar"),
+                    ("delete", "remover"),
                     ("tab", "próximo campo"),
                     (settings.keys.get("back") or "escape", "voltar"),
                 ]
@@ -147,32 +157,62 @@ class SettingsScreen(ConfigurableBackMixin, Screen[None]):
         finally:
             self._loading = False
 
-    def _update_key_button(self, action: str, key: str | None) -> None:
-        self.query_one(f"#key-{action}", Button).label = display_key(key)
+    def _refresh_binding_buttons(self, action: str, settings: Settings | None = None) -> None:
+        settings = settings or self.settings
+        self.query_one(f"#key-{action}", Button).label = display_key(settings.keys.get(action))
+        self.query_one(f"#mouse-{action}", Button).label = display_mouse(settings.mouse.get(action))
 
-    # -- teclas ---------------------------------------------------------------
+    # -- captura de tecla e de botão do mouse -----------------------------------
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         button_id = event.button.id or ""
         if button_id.startswith("key-"):
-            self.start_capture(button_id.removeprefix("key-"))
+            self.start_capture("key", button_id.removeprefix("key-"))
+        elif button_id.startswith("mouse-"):
+            self.start_capture("mouse", button_id.removeprefix("mouse-"))
         elif button_id == "reset":
             self.confirm_reset()
 
-    def start_capture(self, action: str) -> None:
-        self.capturing = action
-        button = self.query_one(f"#key-{action}", Button)
-        button.label = "aperte a nova tecla…"
+    def start_capture(self, kind: str, action: str) -> None:
+        self.stop_capture()
+        self.capturing = (kind, action)
+        button = self.query_one(f"#{kind}-{action}", Button)
         button.add_class("capturing")
+        if kind == "key":
+            button.label = "aperte a nova tecla…"
+        else:
+            button.label = "clique com o botão…"
+            self._capture_timer = self.set_timer(MOUSE_CAPTURE_TIMEOUT, self._mouse_timeout)
 
     def stop_capture(self) -> None:
+        if self._capture_timer is not None:
+            self._capture_timer.stop()
+            self._capture_timer = None
         if self.capturing is None:
             return
-        action = self.capturing
+        kind, action = self.capturing
         self.capturing = None
-        button = self.query_one(f"#key-{action}", Button)
-        button.remove_class("capturing")
-        self._update_key_button(action, self.settings.keys[action])
+        self.query_one(f"#{kind}-{action}", Button).remove_class("capturing")
+        self._refresh_binding_buttons(action)
+
+    def _mouse_timeout(self) -> None:
+        if self.capturing is not None and self.capturing[0] == "mouse":
+            self.notify(
+                "Seu terminal não enviou nenhum botão. Alguns terminais não repassam "
+                "os botões laterais do mouse.",
+                severity="warning",
+                timeout=8,
+            )
+            self.stop_capture()
+
+    def _apply(self, change: Callable[[], Settings], success: str) -> None:
+        try:
+            change()
+        except ValidationError as exc:
+            self.notify(exc.message, severity="error")
+        else:
+            self.notify(success, timeout=2)
+        self.stop_capture()
 
     def on_key(self, event: events.Key) -> None:
         if self.capturing is None:
@@ -180,17 +220,45 @@ class SettingsScreen(ConfigurableBackMixin, Screen[None]):
             return
         event.stop()
         event.prevent_default()
-        action = self.capturing
+        kind, action = self.capturing
+        service = self.cc_app.services.settings
+        label = ACTION_LABELS[action]
         if event.key == "escape":
             self.stop_capture()
-            return
-        try:
-            self.cc_app.services.settings.set_key(action, event.key)
-        except ValidationError as exc:
-            self.notify(exc.message, severity="error")
+        elif event.key in ("delete", "backspace"):
+            if kind == "key":
+                self._apply(lambda: service.clear_key(action), f"{label}: sem tecla")
+            else:
+                self._apply(lambda: service.clear_mouse_button(action), f"{label}: sem botão")
+        elif kind == "key":
+            key = event.key
+            self._apply(lambda: service.set_key(action, key), f"{label}: {display_key(key)}")
         else:
-            self.notify(f"{ACTION_LABELS[action]}: {display_key(event.key)}", timeout=2)
-        self.stop_capture()
+            self.notify("Clique com um botão do mouse (Esc cancela, Del remove).", timeout=3)
+
+    def handle_mouse_capture(self, event: events.MouseEvent) -> bool:
+        """Chamado pelo app para cada evento de mouse. Devolve ``True`` se consumiu."""
+        if self.capturing is None or self.capturing[0] != "mouse":
+            return False
+        if isinstance(event, (events.MouseScrollUp, events.MouseScrollDown)):
+            self.notify("A roda do mouse é reservada para a rolagem.", timeout=3)
+            return True
+        if not isinstance(event, events.MouseDown):
+            return False
+        if event.button == 1:
+            self.notify("O botão esquerdo é reservado para trocar o foco.", timeout=3)
+            return True
+        name = button_name(event.button)
+        if name is None:
+            self.notify(f"Botão {event.button} não é suportado.", severity="warning")
+            return True
+        _, action = self.capturing
+        service = self.cc_app.services.settings
+        self._apply(
+            lambda: service.set_mouse_button(action, name),
+            f"{ACTION_LABELS[action]}: {display_mouse(name)}",
+        )
+        return True
 
     # -- demais campos --------------------------------------------------------
 

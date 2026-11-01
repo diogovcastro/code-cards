@@ -158,12 +158,27 @@ ModalScreen {
 }
 
 .settings-label {
-    width: 38;
+    width: 36;
 }
 
 .key-button {
-    min-width: 24;
-    margin-bottom: 1;
+    width: 22;
+    margin: 0 1 0 0;
+}
+
+.settings-header {
+    height: 1;
+    margin-top: 1;
+}
+
+.settings-header .settings-section {
+    margin: 0;
+}
+
+.column-title {
+    width: 23;
+    text-align: center;
+    color: $text-muted;
 }
 
 Switch {
