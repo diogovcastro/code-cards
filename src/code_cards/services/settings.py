@@ -7,7 +7,7 @@ from dataclasses import fields, replace
 from typing import Any
 
 from code_cards.errors import ValidationError
-from code_cards.models import ACTIONS, OPTIONAL_KEY_ACTIONS, Settings
+from code_cards.models import ACTIONS, MOUSE_BUTTONS, OPTIONAL_KEY_ACTIONS, Settings
 from code_cards.storage import JsonStore
 
 #: Teclas que nunca podem ser usadas pelas ações. O Esc sempre volta (e pode
@@ -96,6 +96,32 @@ def validate_keys(keys: dict[str, str | None]) -> None:
         seen[key] = action
 
 
+def display_mouse(button: str | None) -> str:
+    """Rótulo de um botão do mouse (``"—"`` se nenhum)."""
+    if button is None:
+        return "—"
+    return MOUSE_BUTTONS[button][1] if button in MOUSE_BUTTONS else button
+
+
+def validate_mouse(mouse: dict[str, str | None]) -> None:
+    seen: dict[str, str] = {}
+    for action in ACTIONS:
+        button = mouse.get(action)
+        if button is None:
+            continue
+        if button not in MOUSE_BUTTONS:
+            raise ValidationError(
+                f"Botão do mouse inválido: '{button}'. O esquerdo e a roda são reservados.",
+                {"field": "mouse", "action": action, "button": button},
+            )
+        if button in seen:
+            raise ValidationError(
+                f"O {display_mouse(button).lower()} já está em uso por '{seen[button]}'.",
+                {"field": "mouse", "action": action, "button": button, "conflict": seen[button]},
+            )
+        seen[button] = action
+
+
 def _check_int(name: str, value: Any, low: int, high: int) -> None:
     if isinstance(value, bool) or not isinstance(value, int) or not low <= value <= high:
         raise ValidationError(
@@ -106,6 +132,7 @@ def _check_int(name: str, value: Any, low: int, high: int) -> None:
 
 def validate_settings(settings: Settings) -> None:
     validate_keys(settings.keys)
+    validate_mouse(settings.mouse)
     _check_int("new_cards_per_day", settings.new_cards_per_day, 0, MAX_PER_DAY)
     _check_int("reviews_per_day", settings.reviews_per_day, 0, MAX_PER_DAY)
     _check_int("day_starts_at_hour", settings.day_starts_at_hour, 0, 23)
@@ -146,8 +173,9 @@ class SettingsService:
                 f"Configuração desconhecida: {', '.join(unknown)}.", {"unknown": unknown}
             )
         current = self.get()
-        if "keys" in changes:
-            changes["keys"] = {**current.keys, **changes["keys"]}
+        for mapping in ("keys", "mouse"):
+            if mapping in changes:
+                changes[mapping] = {**getattr(current, mapping), **changes[mapping]}
         return self.save(replace(current, **changes))
 
     @staticmethod
@@ -167,6 +195,14 @@ class SettingsService:
                 "Essa ação precisa de uma tecla.", {"field": "keys", "action": action}
             )
         return self.update(keys={action: None})
+
+    def set_mouse_button(self, action: str, button: str) -> Settings:
+        self._check_action(action)
+        return self.update(mouse={action: button})
+
+    def clear_mouse_button(self, action: str) -> Settings:
+        self._check_action(action)
+        return self.update(mouse={action: None})
 
     def reset(self) -> Settings:
         return self.save(Settings())

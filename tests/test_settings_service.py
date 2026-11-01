@@ -7,7 +7,12 @@ import pytest
 from code_cards.errors import ValidationError
 from code_cards.models import DEFAULT_KEYS, Settings
 from code_cards.paths import DataPaths
-from code_cards.services.settings import SettingsService, display_key, normalize_key
+from code_cards.services.settings import (
+    SettingsService,
+    display_key,
+    display_mouse,
+    normalize_key,
+)
 from code_cards.storage import JsonStore
 
 
@@ -123,3 +128,37 @@ def test_rolagem_pode_ficar_sem_tecla(service: SettingsService) -> None:
 def test_rolagem_nao_pode_repetir_tecla_de_nota(service: SettingsService) -> None:
     with pytest.raises(ValidationError, match="já está em uso"):
         service.set_key("scroll_down", "s")
+
+
+def test_mouse_desligado_por_padrao(service: SettingsService) -> None:
+    assert set(service.get().mouse.values()) == {None}
+
+
+def test_associar_e_remover_botao_do_mouse(service: SettingsService) -> None:
+    assert service.set_mouse_button("back", "button8").mouse["back"] == "button8"
+    assert service.set_mouse_button("great", "middle").mouse["great"] == "middle"
+    # As teclas continuam valendo junto com o mouse.
+    assert service.get().keys["great"] == "a"
+    assert service.clear_mouse_button("back").mouse["back"] is None
+
+
+def test_botao_repetido_e_recusado(service: SettingsService) -> None:
+    service.set_mouse_button("back", "button8")
+    with pytest.raises(ValidationError, match="já está em uso"):
+        service.set_mouse_button("undo", "button8")
+
+
+@pytest.mark.parametrize("button", ["left", "wheel_up", "button1", "x"])
+def test_botao_esquerdo_roda_ou_invalido(service: SettingsService, button: str) -> None:
+    with pytest.raises(ValidationError, match="reservados"):
+        service.set_mouse_button("great", button)
+
+
+def test_restaurar_padroes_remove_mouse(service: SettingsService) -> None:
+    service.set_mouse_button("back", "button8")
+    assert set(service.reset().mouse.values()) == {None}
+
+
+def test_rotulos_de_mouse() -> None:
+    assert display_mouse("button8") == "Lateral (voltar)"
+    assert display_mouse(None) == "—"

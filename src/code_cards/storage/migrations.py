@@ -23,13 +23,14 @@ CURRENT_VERSIONS: dict[str, int] = {
 
 
 def _settings_v1_to_v2(data: dict[str, Any]) -> dict[str, Any]:
-    """Acrescenta as ações voltar e rolar, sem tocar nas teclas já escolhidas."""
+    """Acrescenta voltar, rolar e o bloco ``mouse``, sem tocar nas teclas já escolhidas."""
     keys = dict(data.get("keys", {}))
     used = set(keys.values())
     keys.setdefault("back", "escape")
     keys.setdefault("scroll_up", None if "w" in used else "w")
     keys.setdefault("scroll_down", None)
     data["keys"] = keys
+    data.setdefault("mouse", {})
     return data
 
 

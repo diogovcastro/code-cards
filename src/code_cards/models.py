@@ -221,10 +221,25 @@ DEFAULT_KEYS: dict[str, str | None] = {
     "scroll_down": None,  # "s" é Parcial
 }
 
+#: Botões do mouse que podem ser associados às ações: nome → (número, rótulo).
+#: O esquerdo (troca o foco) e a roda (rolagem) são reservados.
+MOUSE_BUTTONS: dict[str, tuple[int, str]] = {
+    "middle": (2, "Botão do meio"),
+    "right": (3, "Botão direito"),
+    "button8": (8, "Lateral (voltar)"),
+    "button9": (9, "Lateral (avançar)"),
+    "button10": (10, "Botão 10"),
+    "button11": (11, "Botão 11"),
+}
+MOUSE_BUTTON_BY_NUMBER: dict[int, str] = {num: name for name, (num, _) in MOUSE_BUTTONS.items()}
+#: Por padrão nenhuma ação usa o mouse.
+DEFAULT_MOUSE: dict[str, str | None] = dict.fromkeys(ACTIONS)
+
 
 @dataclass
 class Settings:
     keys: dict[str, str | None] = field(default_factory=lambda: dict(DEFAULT_KEYS))
+    mouse: dict[str, str | None] = field(default_factory=lambda: dict(DEFAULT_MOUSE))
     show_help: bool = True
     new_cards_per_day: int = 50
     reviews_per_day: int = 200
@@ -236,6 +251,7 @@ class Settings:
         return {
             "schema_version": SETTINGS_SCHEMA_VERSION,
             "keys": {action: self.keys.get(action) for action in ACTIONS},
+            "mouse": {action: self.mouse.get(action) for action in ACTIONS},
             "show_help": self.show_help,
             "new_cards_per_day": self.new_cards_per_day,
             "reviews_per_day": self.reviews_per_day,
@@ -249,8 +265,17 @@ class Settings:
         defaults = cls()
         keys = dict(DEFAULT_KEYS)
         keys.update({k: v for k, v in data.get("keys", {}).items() if k in DEFAULT_KEYS})
+        mouse = dict(DEFAULT_MOUSE)
+        mouse.update(
+            {
+                k: v
+                for k, v in (data.get("mouse") or {}).items()
+                if k in DEFAULT_MOUSE and (v is None or v in MOUSE_BUTTONS)
+            }
+        )
         return cls(
             keys=keys,
+            mouse=mouse,
             show_help=bool(data.get("show_help", defaults.show_help)),
             new_cards_per_day=int(data.get("new_cards_per_day", defaults.new_cards_per_day)),
             reviews_per_day=int(data.get("reviews_per_day", defaults.reviews_per_day)),
