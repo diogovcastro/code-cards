@@ -6,6 +6,7 @@ from textual.app import App
 
 from code_cards.models import Settings
 from code_cards.services.container import Services, build_services
+from code_cards.tui.mouse import install_extra_button_support
 
 
 class CodeCardsApp(App[None]):
@@ -13,6 +14,7 @@ class CodeCardsApp(App[None]):
     TITLE = "code-cards"
 
     def __init__(self, services: Services | None = None) -> None:
+        install_extra_button_support()
         super().__init__()
         self.services = services or build_services()
 

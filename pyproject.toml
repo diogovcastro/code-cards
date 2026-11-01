@@ -22,7 +22,7 @@ classifiers = [
     "Topic :: Software Development",
 ]
 dependencies = [
-    "textual[syntax]>=3.0",
+    "textual[syntax]>=8.2,<9",  # tui/mouse.py corrige uma parte interna do parser
     "fsrs>=6.0,<7",
     "typer>=0.15",
     "platformdirs>=4.0",

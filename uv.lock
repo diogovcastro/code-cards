@@ -104,7 +104,7 @@ requires-dist = [
     { name = "filelock", specifier = ">=3.12" },
     { name = "fsrs", specifier = ">=6.0,<7" },
     { name = "platformdirs", specifier = ">=4.0" },
-    { name = "textual", extras = ["syntax"], specifier = ">=3.0" },
+    { name = "textual", extras = ["syntax"], specifier = ">=8.2,<9" },
     { name = "typer", specifier = ">=0.15" },
 ]
 
