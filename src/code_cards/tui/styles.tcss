@@ -31,3 +31,39 @@ Screen {
     border-top: solid $panel-lighten-2;
     color: $text-muted;
 }
+
+/* Estudo */
+
+#study-header {
+    height: 1;
+    margin: 1 0 1 0;
+}
+
+#deck-name {
+    width: 1fr;
+}
+
+#counts {
+    width: auto;
+}
+
+#code {
+    height: 1fr;
+    min-height: 5;
+    border: round $accent;
+    border-title-color: $text-muted;
+}
+
+#description-box {
+    height: auto;
+    max-height: 40%;
+    border: round $success;
+    border-title-color: $text-muted;
+    padding: 0 1;
+}
+
+#done {
+    padding: 2;
+    height: auto;
+    text-align: center;
+}
