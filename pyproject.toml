@@ -7,6 +7,20 @@ license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "Diogo Vieira" }]
 requires-python = ">=3.11"
+keywords = ["flashcards", "spaced-repetition", "fsrs", "tui", "cli", "code-reading"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Education",
+    "Topic :: Software Development",
+]
 dependencies = [
     "textual[syntax]>=3.0",
     "fsrs>=6.0,<7",
@@ -32,6 +46,9 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/code_cards"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/code_cards", "tests", "docs", "README.md", "LICENSE"]
 
 [tool.ruff]
 line-length = 100
