@@ -196,6 +196,25 @@ class StudyService:
         previews = self.scheduler().preview(card.fsrs, self.clock.now())
         return StudyItem(deck_id=deck.id, card=card, kind=kind, previews=previews)
 
+    def item_for(self, deck_id: str, card_id: str) -> StudyItem:
+        """Item de estudo de um card específico (ex.: o card que acabou de ser desfeito)."""
+        deck = self.store.load_deck(deck_id)
+        card = deck.find_card(card_id)
+        if card is None:
+            raise CardNotFoundError(
+                f"Card '{card_id}' não está mais no deck.",
+                {"card_id": card_id, "deck_id": deck_id},
+            )
+        scheduler = self.scheduler()
+        if card.is_new:
+            kind = QueueKind.NEW
+        elif scheduler.phase(card.fsrs) is CardPhase.REVIEW:
+            kind = QueueKind.REVIEW
+        else:
+            kind = QueueKind.LEARNING
+        previews = scheduler.preview(card.fsrs, self.clock.now())
+        return StudyItem(deck_id=deck.id, card=card, kind=kind, previews=previews)
+
     def next_due(self, deck_id: str) -> datetime | None:
         """Quando o deck terá algo para estudar de novo (``None`` se nunca)."""
         deck = self.store.load_deck(deck_id)

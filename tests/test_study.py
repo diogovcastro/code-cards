@@ -214,3 +214,15 @@ def test_card_apagado_durante_estudo(store: JsonStore, study: StudyService) -> N
     store.save_deck(deck)
     with pytest.raises(CardNotFoundError):
         study.answer("deck01", "card0000", Grade.GREAT)
+
+
+def test_item_de_card_especifico_apos_desfazer(store: JsonStore, study: StudyService) -> None:
+    make_deck(store, 2)
+    study.answer("deck01", "card0000", Grade.GREAT)
+    _, card_id = study.undo()
+    item = study.item_for("deck01", card_id)
+    assert item.card.id == "card0000"
+    assert item.kind is QueueKind.NEW
+    assert item.previews[Grade.FORGOT] == timedelta(minutes=1)
+    with pytest.raises(CardNotFoundError):
+        study.item_for("deck01", "naoexiste")
