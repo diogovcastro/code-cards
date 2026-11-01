@@ -11,26 +11,37 @@ from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, VerticalScroll
 from textual.screen import Screen
+from textual.widget import Widget
 from textual.widgets import Static, TextArea
 
 from code_cards.errors import CardNotFoundError, CodeCardsError, DeckNotFoundError
 from code_cards.models import Grade, Settings
 from code_cards.scheduling import format_interval
 from code_cards.services.study import StudyItem, StudyService
-from code_cards.tui.widgets.code_view import code_area, show_code
+from code_cards.tui.widgets.code_view import (
+    DescriptionView,
+    StudyCodeView,
+    code_area,
+    show_code,
+)
 from code_cards.tui.widgets.help_bar import HelpBar
 
 if TYPE_CHECKING:
     from code_cards.tui.app import CodeCardsApp
 
 GRADE_ORDER = (Grade.GREAT, Grade.PARTIAL, Grade.FORGOT)
-STUDY_ACTIONS = frozenset({"great", "partial", "forgot", "reveal", "undo"})
+STUDY_ACTIONS = frozenset(
+    {"great", "partial", "forgot", "reveal", "undo", "scroll_up", "scroll_down"}
+)
 
 
 class StudyScreen(Screen[None]):
     BINDINGS = [
         Binding("escape", "back", "Voltar"),
         Binding("question_mark", "toggle_help", "Ajuda", show=False),
+        # Prioridade: o TextArea moveria um cursor invisível em vez de rolar.
+        Binding("up", "scroll_section(-1)", "Rolar para cima", show=False, priority=True),
+        Binding("down", "scroll_section(1)", "Rolar para baixo", show=False, priority=True),
     ]
 
     def __init__(self, deck_id: str) -> None:
@@ -49,9 +60,14 @@ class StudyScreen(Screen[None]):
         with Horizontal(id="study-header"):
             yield Static(id="deck-name")
             yield Static(id="counts")
-        yield code_area(read_only=True, id="code", theme=self.cc_app.settings.editor_theme)
+        yield code_area(
+            read_only=True,
+            id="code",
+            theme=self.cc_app.settings.editor_theme,
+            cls=StudyCodeView,
+        )
         with VerticalScroll(id="description-box"):
-            yield Static(id="description")
+            yield DescriptionView(id="description")
         yield Static(id="done")
         yield HelpBar(id="help")
 
@@ -115,10 +131,16 @@ class StudyScreen(Screen[None]):
         code.display = True
         desc_box.display = False
         show_code(code, item.card.code, item.card.language)
+        # Só o código está visível: a rolagem age nele.
         code.focus()
         self.query_one("#description", Static).update(Text(item.card.description))
+        desc_box.scroll_home(animate=False)
         self._set_help(
-            [(self.settings.keys["reveal"] or "space", "mostrar descrição"), ("escape", "voltar")]
+            [
+                (self.settings.keys["reveal"] or "space", "mostrar descrição"),
+                ("↑↓", "rolar"),
+                ("escape", "voltar"),
+            ]
         )
 
     def _done_text(self) -> Text:
@@ -148,7 +170,10 @@ class StudyScreen(Screen[None]):
         if self.item is None or self.revealed:
             return
         self.revealed = True
-        self.query_one("#description-box").display = True
+        desc_box = self.query_one("#description-box")
+        desc_box.display = True
+        # O usuário acabou de ler o código: o foco (e a rolagem) vai para a descrição.
+        desc_box.focus()
         keys = self.settings.keys
         items = [
             (
@@ -196,8 +221,26 @@ class StudyScreen(Screen[None]):
             self.reveal()
         elif action == "undo":
             self.undo()
+        elif action == "scroll_up":
+            self.action_scroll_section(-1)
+        elif action == "scroll_down":
+            self.action_scroll_section(1)
         else:
             self.answer(Grade(action))
+
+    def active_section(self) -> Widget | None:
+        """Seção que recebe a rolagem: a que está em foco (código por padrão)."""
+        if self.item is None:
+            return None
+        desc_box = self.query_one("#description-box")
+        if self.revealed and self.focused is desc_box:
+            return desc_box
+        return self.query_one("#code")
+
+    def action_scroll_section(self, delta: int) -> None:
+        section = self.active_section()
+        if section is not None:
+            section.scroll_relative(y=delta, animate=False)
 
     def action_back(self) -> None:
         self.app.pop_screen()

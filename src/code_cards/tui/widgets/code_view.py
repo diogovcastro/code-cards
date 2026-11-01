@@ -2,9 +2,36 @@
 
 from __future__ import annotations
 
-from textual.widgets import TextArea
+from textual import events
+from textual.widgets import Static, TextArea
 
 from code_cards import languages
+
+
+class StudyCodeView(TextArea):
+    """Código da tela de estudo: o clique só dá foco, sem cursor nem seleção.
+
+    Assim a troca de foco entre código e descrição não muda nada na tela.
+    """
+
+    ALLOW_SELECT = False
+
+    async def _on_mouse_down(self, event: events.MouseDown) -> None:
+        event.stop()
+        event.prevent_default()
+        self.focus()
+
+    async def _on_mouse_move(self, event: events.MouseMove) -> None:
+        return
+
+    async def _on_mouse_up(self, event: events.MouseUp) -> None:
+        return
+
+
+class DescriptionView(Static):
+    """Descrição na tela de estudo, sem seleção de texto pelo mouse."""
+
+    ALLOW_SELECT = False
 
 
 def code_area(
@@ -14,9 +41,10 @@ def code_area(
     theme: str = "monokai",
     read_only: bool = False,
     id: str | None = None,
+    cls: type[TextArea] = TextArea,
 ) -> TextArea:
     """TextArea configurado para código; ``read_only=True`` na tela de estudo."""
-    area = TextArea.code_editor(
+    area = cls.code_editor(
         code,
         language=languages.highlight_for(language),
         theme=theme,
