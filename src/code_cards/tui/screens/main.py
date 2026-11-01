@@ -11,6 +11,7 @@ from textual.widgets import OptionList, Static
 
 from code_cards.errors import CodeCardsError
 from code_cards.tui.screens.card_editor import CardEditorScreen
+from code_cards.tui.screens.deck_manager import DeckManagerScreen
 from code_cards.tui.screens.study import StudyScreen
 from code_cards.tui.widgets.confirm_modal import TextPromptModal
 from code_cards.tui.widgets.deck_table import DECK_PREFIX, DeckTable
@@ -31,6 +32,7 @@ ADD_CARD = "add-card"
 
 class MainScreen(Screen[None]):
     BINDINGS = [
+        Binding("g", "manage", "Gerenciar deck"),
         Binding("q", "app.quit", "Sair"),
         Binding("question_mark", "toggle_help", "Ajuda", show=False),
     ]
@@ -56,7 +58,7 @@ class MainScreen(Screen[None]):
         return [(CREATE_DECK, "+ Criar deck"), (ADD_CARD, "+ Adicionar card")]
 
     def help_items(self) -> list[tuple[str, str]]:
-        return [("enter", "estudar"), ("q", "sair")]
+        return [("enter", "estudar"), ("g", "gerenciar deck"), ("q", "sair")]
 
     def refresh_decks(self) -> None:
         try:
@@ -92,6 +94,13 @@ class MainScreen(Screen[None]):
             self.create_deck()
         elif action_id == ADD_CARD:
             self.add_card()
+
+    def action_manage(self) -> None:
+        deck_id = self.query_one(DeckTable).highlighted_deck_id
+        if deck_id is None:
+            self.notify("Selecione um deck para gerenciar.", timeout=3)
+            return
+        self.app.push_screen(DeckManagerScreen(deck_id))
 
     def create_deck(self) -> None:
         def after(name: str | None) -> None:
