@@ -1,0 +1,86 @@
+"""Painel principal: lista de decks e ações."""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, cast
+
+from textual.app import ComposeResult
+from textual.binding import Binding
+from textual.screen import Screen
+from textual.widgets import OptionList, Static
+
+from code_cards.errors import CodeCardsError
+from code_cards.tui.widgets.deck_table import DECK_PREFIX, DeckTable
+from code_cards.tui.widgets.help_bar import HelpBar
+
+if TYPE_CHECKING:
+    from code_cards.tui.app import CodeCardsApp
+
+WELCOME = (
+    "Bem-vindo ao code-cards!\n\n"
+    'Ainda não há decks. Crie um pela CLI com [b]code-cards deck create "Nome"[/b] '
+    "ou importe um lote com [b]code-cards import lote.json[/b]."
+)
+
+
+class MainScreen(Screen[None]):
+    BINDINGS = [
+        Binding("q", "app.quit", "Sair"),
+        Binding("question_mark", "toggle_help", "Ajuda", show=False),
+    ]
+
+    @property
+    def cc_app(self) -> CodeCardsApp:
+        return cast("CodeCardsApp", self.app)
+
+    def compose(self) -> ComposeResult:
+        yield Static("code-cards", id="app-title")
+        yield Static(WELCOME, id="welcome")
+        yield DeckTable(id="deck-list")
+        yield HelpBar(id="help")
+
+    def on_mount(self) -> None:
+        self.refresh_decks()
+
+    def on_screen_resume(self) -> None:
+        self.refresh_decks()
+
+    def menu_actions(self) -> list[tuple[str, str]]:
+        """Ações exibidas abaixo dos decks: ``(id, rótulo)``."""
+        return []
+
+    def help_items(self) -> list[tuple[str, str]]:
+        return [("enter", "estudar"), ("q", "sair")]
+
+    def refresh_decks(self) -> None:
+        try:
+            summaries = self.cc_app.services.study.summaries()
+        except CodeCardsError as exc:
+            self.notify(exc.message, severity="error", timeout=8)
+            summaries = []
+        table = self.query_one(DeckTable)
+        table.set_content(summaries, self.menu_actions())
+        self.query_one("#welcome").display = not summaries
+        self.query_one("#deck-list").display = table.option_count > 0
+        help_bar = self.query_one(HelpBar)
+        help_bar.set_items(self.help_items())
+        help_bar.set_enabled(self.cc_app.settings.show_help)
+        table.focus()
+
+    def action_toggle_help(self) -> None:
+        self.query_one(HelpBar).toggle()
+
+    def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
+        option_id = event.option.id or ""
+        if option_id.startswith(DECK_PREFIX):
+            self.open_study(option_id.removeprefix(DECK_PREFIX))
+        else:
+            self.run_menu_action(option_id)
+
+    def open_study(self, deck_id: str) -> None:
+        from code_cards.tui.screens.study import StudyScreen
+
+        self.app.push_screen(StudyScreen(deck_id))
+
+    def run_menu_action(self, action_id: str) -> None:
+        """Executa uma ação do menu (preenchida nas próximas telas)."""
