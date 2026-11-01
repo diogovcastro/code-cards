@@ -218,3 +218,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# code-cards: pasta de dados local usada em testes manuais
+.code-cards-home/
