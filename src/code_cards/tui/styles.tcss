@@ -100,6 +100,9 @@ ModalScreen {
 
 /* Editor de card */
 
+/* Todas as seções usam a mesma borda arredondada para terem a mesma largura,
+   com uma linha de espaço entre elas. */
+
 #editor-selects {
     height: auto;
     margin: 1 0 0 0;
@@ -108,12 +111,24 @@ ModalScreen {
 #editor-selects > Vertical {
     height: auto;
     width: 1fr;
+}
+
+#deck-column {
     margin-right: 1;
+}
+
+#editor-selects SelectCurrent {
+    border: round $panel-lighten-2;
+}
+
+#editor-selects Select:focus > SelectCurrent {
+    border: round $border;
 }
 
 #code-editor {
     height: 2fr;
     min-height: 6;
+    margin-top: 1;
     border: round $accent;
     border-title-color: $text-muted;
 }
@@ -121,12 +136,19 @@ ModalScreen {
 #description-editor {
     height: 1fr;
     min-height: 4;
+    margin-top: 1;
     border: round $success;
     border-title-color: $text-muted;
 }
 
 #tags-input {
-    margin-bottom: 1;
+    margin: 1 0;
+    border: round $panel-lighten-2;
+    border-title-color: $text-muted;
+}
+
+#tags-input:focus {
+    border: round $border;
 }
 
 /* Gerenciar deck */

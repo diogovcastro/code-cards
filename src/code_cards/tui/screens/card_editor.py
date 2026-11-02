@@ -83,7 +83,7 @@ class CardEditorScreen(ConfigurableBackMixin, Screen[bool]):
         title = "Novo card" if self.is_new else "Editar card"
         yield Static(title, id="app-title")
         with Horizontal(id="editor-selects"):
-            with Vertical():
+            with Vertical(id="deck-column"):
                 yield Label("Deck")
                 yield Select(
                     [(d.name, d.id) for d in decks],

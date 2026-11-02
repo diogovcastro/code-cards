@@ -134,3 +134,23 @@ async def test_trocar_linguagem_atualiza_highlight(svc: Services) -> None:
         editor.query_one("#language-select", Select).value = "text"
         await pilot.pause()
         assert code.language is None
+
+
+async def test_secoes_do_editor_alinhadas_e_espacadas(svc: Services) -> None:
+    svc.decks.create("Python")
+    app = CodeCardsApp(svc)
+    async with app.run_test(size=(120, 36)) as pilot:
+        await pilot.pause()
+        screen = await open_editor(app, pilot)
+        deck = screen.query_one("#deck-select").region
+        language = screen.query_one("#language-select").region
+        sections = [screen.query_one(q).region for q in ("#code-editor", "#description-editor")]
+        sections.append(screen.query_one("#tags-input").region)
+        # Mesmas bordas laterais: os dois seletores juntos ocupam a largura das seções.
+        for region in sections:
+            assert region.x == deck.x
+            assert region.right == language.right
+        # Uma linha de espaço entre seções consecutivas.
+        tops = [language.y, *(r.y for r in sections)]
+        bottoms = [language.bottom, *(r.bottom for r in sections)]
+        assert all(top - bottom == 1 for bottom, top in zip(bottoms, tops[1:], strict=False))
