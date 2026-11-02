@@ -6,7 +6,7 @@ import pytest
 
 from code_cards.services.container import Services
 from code_cards.tui.app import CodeCardsApp
-from code_cards.tui.screens.main import MainScreen
+from code_cards.tui.screens.main import ADD_CARD, CREATE_DECK, OPEN_SETTINGS, MainScreen
 from code_cards.tui.widgets.deck_table import DeckTable
 from tests.factories import make_services
 
@@ -47,3 +47,20 @@ async def test_painel_lista_decks_com_contagens(svc: Services) -> None:
         assert "Python async" in row
         assert "3/100" in row
         assert app.screen.query_one("#welcome").display is False
+
+
+async def test_acoes_do_painel_tem_linha_em_branco_entre_elas(svc: Services) -> None:
+    seed(svc, 1)
+    app = CodeCardsApp(svc)
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        table = app.screen.query_one(DeckTable)
+        ids = [table.get_option_at_index(i).id for i in range(table.option_count)]
+        start = ids.index(CREATE_DECK)
+        assert ids[start:] == [CREATE_DECK, "spacer:1", ADD_CARD, "spacer:2", OPEN_SETTINGS]
+        assert table.get_option(ids[start + 1]).disabled
+        # O cursor pula a linha em branco.
+        table.highlight_id(CREATE_DECK)
+        await pilot.press("down")
+        assert table.highlighted_option is not None
+        assert table.highlighted_option.id == ADD_CARD

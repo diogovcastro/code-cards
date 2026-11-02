@@ -20,6 +20,8 @@ def _fit(name: str, width: int) -> str:
 
 
 HEADER_ID = "header"
+#: Prefixo dos espaçadores entre as ações (opções vazias e desabilitadas).
+SPACER_PREFIX = "spacer:"
 
 
 def header_text() -> Text:
@@ -49,7 +51,11 @@ class DeckTable(OptionList):
             options.extend(Option(deck_row(s), id=f"{DECK_PREFIX}{s.deck_id}") for s in summaries)
             if actions:
                 options.append(None)
-        options.extend(Option(label, id=action_id) for action_id, label in actions)
+        for index, (action_id, label) in enumerate(actions):
+            if index:
+                # Linha em branco entre as ações; o cursor pula opções desabilitadas.
+                options.append(Option("", id=f"{SPACER_PREFIX}{index}", disabled=True))
+            options.append(Option(label, id=action_id))
         self.add_options(options)
         if previous is not None:
             try:
