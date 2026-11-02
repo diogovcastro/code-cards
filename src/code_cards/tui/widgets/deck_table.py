@@ -20,8 +20,11 @@ def _fit(name: str, width: int) -> str:
 
 
 HEADER_ID = "header"
-#: Prefixo dos espaçadores entre as ações (opções vazias e desabilitadas).
+#: Prefixo dos espaçadores entre grupos de ações (opções vazias e desabilitadas).
 SPACER_PREFIX = "spacer:"
+
+#: Ação do painel ``(id, rótulo)``; ``None`` vira uma linha em branco entre grupos.
+MenuItem = tuple[str, str] | None
 
 
 def header_text() -> Text:
@@ -40,7 +43,7 @@ def deck_row(summary: DeckSummary) -> Text:
 class DeckTable(OptionList):
     """``OptionList`` com cabeçalho, uma linha por deck e, depois, as ações do painel."""
 
-    def set_content(self, summaries: list[DeckSummary], actions: list[tuple[str, str]]) -> None:
+    def set_content(self, summaries: list[DeckSummary], actions: list[MenuItem]) -> None:
         """Reconstrói a lista mantendo o cursor no mesmo item, se possível."""
         previous = self.highlighted_option.id if self.highlighted_option is not None else None
         self.clear_options()
@@ -51,11 +54,13 @@ class DeckTable(OptionList):
             options.extend(Option(deck_row(s), id=f"{DECK_PREFIX}{s.deck_id}") for s in summaries)
             if actions:
                 options.append(None)
-        for index, (action_id, label) in enumerate(actions):
-            if index:
-                # Linha em branco entre as ações; o cursor pula opções desabilitadas.
+        for index, item in enumerate(actions):
+            if item is None:
+                # Linha em branco entre grupos; o cursor pula opções desabilitadas.
                 options.append(Option("", id=f"{SPACER_PREFIX}{index}", disabled=True))
-            options.append(Option(label, id=action_id))
+            else:
+                action_id, label = item
+                options.append(Option(label, id=action_id))
         self.add_options(options)
         if previous is not None:
             try:

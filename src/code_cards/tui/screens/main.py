@@ -15,7 +15,7 @@ from code_cards.tui.screens.deck_manager import DeckManagerScreen
 from code_cards.tui.screens.settings import SettingsScreen
 from code_cards.tui.screens.study import StudyScreen
 from code_cards.tui.widgets.confirm_modal import TextPromptModal
-from code_cards.tui.widgets.deck_table import DECK_PREFIX, DeckTable
+from code_cards.tui.widgets.deck_table import DECK_PREFIX, DeckTable, MenuItem
 from code_cards.tui.widgets.help_bar import HelpBar
 
 if TYPE_CHECKING:
@@ -55,11 +55,12 @@ class MainScreen(Screen[None]):
     def on_screen_resume(self) -> None:
         self.refresh_decks()
 
-    def menu_actions(self) -> list[tuple[str, str]]:
-        """Ações exibidas abaixo dos decks: ``(id, rótulo)``."""
+    def menu_actions(self) -> list[MenuItem]:
+        """Ações exibidas abaixo dos decks: ``(id, rótulo)``; ``None`` separa grupos."""
         return [
             (CREATE_DECK, "+ Criar deck"),
             (ADD_CARD, "+ Adicionar card"),
+            None,
             (OPEN_SETTINGS, "⚙ Configurações"),
         ]
 

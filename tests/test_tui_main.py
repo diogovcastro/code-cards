@@ -49,7 +49,7 @@ async def test_painel_lista_decks_com_contagens(svc: Services) -> None:
         assert app.screen.query_one("#welcome").display is False
 
 
-async def test_acoes_do_painel_tem_linha_em_branco_entre_elas(svc: Services) -> None:
+async def test_configuracoes_separada_das_acoes_de_criar(svc: Services) -> None:
     seed(svc, 1)
     app = CodeCardsApp(svc)
     async with app.run_test() as pilot:
@@ -57,10 +57,10 @@ async def test_acoes_do_painel_tem_linha_em_branco_entre_elas(svc: Services) -> 
         table = app.screen.query_one(DeckTable)
         ids = [table.get_option_at_index(i).id for i in range(table.option_count)]
         start = ids.index(CREATE_DECK)
-        assert ids[start:] == [CREATE_DECK, "spacer:1", ADD_CARD, "spacer:2", OPEN_SETTINGS]
-        assert table.get_option(ids[start + 1]).disabled
+        assert ids[start:] == [CREATE_DECK, ADD_CARD, "spacer:2", OPEN_SETTINGS]
+        assert table.get_option("spacer:2").disabled
         # O cursor pula a linha em branco.
-        table.highlight_id(CREATE_DECK)
+        table.highlight_id(ADD_CARD)
         await pilot.press("down")
         assert table.highlighted_option is not None
-        assert table.highlighted_option.id == ADD_CARD
+        assert table.highlighted_option.id == OPEN_SETTINGS
